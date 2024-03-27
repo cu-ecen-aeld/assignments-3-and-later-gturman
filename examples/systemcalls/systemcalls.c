@@ -17,7 +17,11 @@ bool do_system(const char *cmd)
  *   or false() if it returned a failure
 */
 
-    return true;
+    int ret;
+    ret = system(cmd);
+    if (ret == -1) return false;
+    else return true;
+
 }
 
 /**
@@ -47,7 +51,7 @@ bool do_exec(int count, ...)
     command[count] = NULL;
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
-    command[count] = command[count];
+    //command[count] = command[count];
 
 /*
  * TODO:
@@ -58,6 +62,45 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+    int status;
+    int ret;
+    pid_t pid;
+
+    fflush(stdout);   
+
+    pid = fork();
+    printf("PID is %d\n",pid);
+    if (pid == -1) //failed to fork 
+        return false;
+    
+    if (!pid) { //child process!
+        printf("in the child\n");
+        char *args[count];
+        for(i=0; i<count; i++){
+            args[i] = command[i+1];
+            printf("WOOOOOOOOOOOOOOOOO %s\n",args[i]);
+        }
+        ret = execv(command[0], args);//kernel jumps to new code from here
+        if (ret == -1){ //failed to execute
+            printf("in child fail\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+    printf("in the parent\n");
+
+    //if we're here, we're in the parent process!
+    printf("waitpid pid = %d\n",pid);
+    if (waitpid(pid, &status, 0) == -1) {//ask about child
+        printf("error waiting\n");
+        return false;
+    }
+    else if (WIFEXITED(status)){//child terminated normally with exit status
+        printf("child status = %d\n", WEXITSTATUS(status));
+        if (WEXITSTATUS(status) == EXIT_SUCCESS)
+            return true;
+        else
+            return false;
+    }
 
     va_end(args);
 
